@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏得分计算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        input, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+        }
+        .result, .history {
+            margin-top: 20px;
+        }
+        .pagination {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>游戏得分计算器</h1>
+        <input type="text" id="name" placeholder="输入昵称">
+        <input type="number" id="level" placeholder="输入等级 (1~100)" min="1" max="100">
+        <button onclick="calculateScore()">计算得分</button>
+
+        <div class="result">
+            <h2>结果</h2>
+            <p id="resultText"></p>
+        </div>
+
+        <div class="history">
+            <h2>历史记录</h2>
+            <ul id="historyList"></ul>
+            <div class="pagination">
+                <button id="prevPage" onclick="changePage(-1)">上一页</button>
+                <button id="nextPage" onclick="changePage(1)">下一页</button>
+                <p>当前页: <span id="currentPage">1</span></p>
+            </div>
+        </div>
+
+        <h3>今天的计算次数: <span id="countToday">1</span></h3>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const itemsPerPage = 10; // 每页显示的条目数
+
+        async function calculateScore() {
+            const name = document.getElementById('name').value;
+            const level = document.getElementById('level').value;
+
+            if (!name || !level) {
+                alert('请输入昵称和等级！');
+                return;
+            }
+
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, level }),
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            document.getElementById('resultText').innerText =
+                `昵称: ${data.name}, 等级: ${data.level}, 骰子点数: ${data.dice}, 最终得分: ${data.score}`;
+
+            loadHistory();
+            document.getElementById('countToday').innerText = '0'; // 计算后设置为0
+        }
+
+        async function loadHistory(page = 1) {
+            const response = await fetch(`/history?page=${page}`);
+            const data = await response.json();
+
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = data.items.map(item =>
+                `<li>${item.name} - 等级: ${item.level}, 骰子点数: ${item.dice}, 得分: ${item.final_score}, 日期: ${item.date}</li>`
+            ).join('');
+
+            // 更新当前页
+            document.getElementById('currentPage').innerText = page;
+
+            // 更新按钮状态
+            document.getElementById('prevPage').disabled = page === 1;
+            document.getElementById('nextPage').disabled = data.isLastPage;
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            loadHistory(currentPage);
+        }
+
+        // 页面加载时加载历史记录
+        window.onload = () => loadHistory(currentPage);
+    </script>
+</body>
+</html>
