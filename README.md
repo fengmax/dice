@@ -17,3 +17,6 @@
 ├── run.py                # 启动应用的脚本
 │
 └── README.md             # 项目说明文件
+开启虚拟化 source /root/myenv/bin/activate
+关闭虚拟化 deactivate
+环境变量 export FLASK_APP=app.py  # 如果你的文件名是 app.py
