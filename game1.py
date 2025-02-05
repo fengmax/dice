@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 history = []
 today_counts = {}
+MAX_HISTORY_SIZE = 50  # 设置最大历史记录数量
 
 def roll_dice():
     return random.randint(1, 100)
@@ -30,19 +31,22 @@ def calculate():
 
     # 检查今天的计算次数
     if name in today_counts:
-        # 如果用户的日期不是今天，重置计数
         if today_counts[name]['date'] != current_date:
-            today_counts[name] = {'count': 1, 'date': current_date}  # 初始化为1
+            today_counts[name] = {'count': 1, 'date': current_date}
         else:
-            today_counts[name]['count'] += 1  # 增加计数
+            today_counts[name]['count'] += 1
 
         if today_counts[name]['count'] > 1:
             return jsonify({'error': f"{name} 今天已经计算过一次，无法继续！"}), 400
     else:
-        today_counts[name] = {'count': 1, 'date': current_date}  # 初始化为1
+        today_counts[name] = {'count': 1, 'date': current_date}
 
     dice = roll_dice()
     score = calculate_final_score(level, dice)
+
+    # 检查并清理历史记录
+    if len(history) >= MAX_HISTORY_SIZE:
+        history.pop(0)  # 删除最旧的记录
 
     history.append({
         "name": name,
@@ -52,15 +56,12 @@ def calculate():
         "date": current_date.isoformat()
     })
 
-    # 按日期排序
-    history.sort(key=lambda x: x['date'], reverse=True)
-
     return jsonify({'name': name, 'level': level, 'dice': dice, 'score': score})
 
 @app.route('/history', methods=['GET'])
 def get_history():
     page = int(request.args.get('page', 1))
-    items_per_page = 50
+    items_per_page = 10  # 每页10条记录
 
     # 按日期排序
     sorted_history = sorted(history, key=lambda x: x['date'], reverse=True)
