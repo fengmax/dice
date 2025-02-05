@@ -46,9 +46,10 @@ def calculate():
 
     # 检查并清理历史记录
     if len(history) >= MAX_HISTORY_SIZE:
-        history.pop(0)  # 删除最旧的记录
+        history.pop()  # 删除最旧的记录
 
-    history.append({
+    # 将新记录插入到历史记录的开头
+    history.insert(0, {
         "name": name,
         "level": level,
         "dice": dice,
@@ -61,16 +62,15 @@ def calculate():
 @app.route('/history', methods=['GET'])
 def get_history():
     page = int(request.args.get('page', 1))
-    items_per_page = 10  # 每页10条记录
+    items_per_page = 5  # 每页5条记录
 
-    # 按日期排序
-    sorted_history = sorted(history, key=lambda x: x['date'], reverse=True)
-    total_items = len(sorted_history)
+    # 不需要再排序，因为新记录已经在开头
+    total_items = len(history)
 
     # 分页
     start_index = (page - 1) * items_per_page
     end_index = start_index + items_per_page
-    items = sorted_history[start_index:end_index]
+    items = history[start_index:end_index]
 
     is_last_page = end_index >= total_items
 
