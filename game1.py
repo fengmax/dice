@@ -26,16 +26,20 @@ def calculate():
     data = request.get_json()
     name = data.get('name').strip()
     level = int(data.get('level'))
-    current_date = datetime.date.today().isoformat()
+    current_date = datetime.date.today()
 
     # 检查今天的计算次数
-    if name not in today_counts:
-        today_counts[name] = 1  # 初始化为1
-    else:
-        today_counts[name] += 1  # 增加计数
+    if name in today_counts:
+        # 如果用户的日期不是今天，重置计数
+        if today_counts[name]['date'] != current_date:
+            today_counts[name] = {'count': 1, 'date': current_date}  # 初始化为1
+        else:
+            today_counts[name]['count'] += 1  # 增加计数
 
-    if today_counts[name] > 1:
-        return jsonify({'error': f"{name} 今天已经计算过一次，无法继续！"}), 400
+        if today_counts[name]['count'] > 1:
+            return jsonify({'error': f"{name} 今天已经计算过一次，无法继续！"}), 400
+    else:
+        today_counts[name] = {'count': 1, 'date': current_date}  # 初始化为1
 
     dice = roll_dice()
     score = calculate_final_score(level, dice)
@@ -45,7 +49,7 @@ def calculate():
         "level": level,
         "dice": dice,
         "final_score": score,
-        "date": current_date
+        "date": current_date.isoformat()
     })
 
     # 按日期排序
