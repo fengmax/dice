@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 history = []
 today_counts = {}
+ip_key_usage = {}  # 记录每个IP地址的key使用情况
 MAX_HISTORY_SIZE = 50  # 设置最大历史记录数量
 KEY_FILE = 'keys.txt'  # 存储key的文件
 
@@ -39,6 +40,7 @@ def calculate():
     name = data.get('name').strip()
     level = int(data.get('level'))
     current_date = datetime.date.today()
+    ip_address = request.remote_addr
 
     # 检查今天的计算次数
     if name in today_counts:
@@ -52,12 +54,22 @@ def calculate():
     else:
         today_counts[name] = {'count': 1, 'date': current_date}
 
-    dice = roll_dice()
-    score = calculate_final_score(level, dice)
-    key = get_next_key()
+    # 检查IP地址的key使用情况
+    if ip_address in ip_key_usage:
+        if ip_key_usage[ip_address]['date'] == current_date:
+            key = ip_key_usage[ip_address]['key']
+        else:
+            key = get_next_key()
+            ip_key_usage[ip_address] = {'key': key, 'date': current_date}
+    else:
+        key = get_next_key()
+        ip_key_usage[ip_address] = {'key': key, 'date': current_date}
 
     if key is None:
         return jsonify({'error': '没有可用的key！'}), 400
+
+    dice = roll_dice()
+    score = calculate_final_score(level, dice)
 
     # 检查并清理历史记录
     if len(history) >= MAX_HISTORY_SIZE:
