@@ -7,6 +7,7 @@ app = Flask(__name__)
 history = []
 today_counts = {}
 MAX_HISTORY_SIZE = 50  # 设置最大历史记录数量
+KEY_FILE = 'keys.txt'  # 存储key的文件
 
 def roll_dice():
     return random.randint(1, 100)
@@ -21,6 +22,16 @@ def calculate_final_score(level, dice):
         final_score = base_score
     final_score = max(1, min(100, final_score))
     return round(final_score)
+
+def get_next_key():
+    with open(KEY_FILE, 'r') as file:
+        keys = file.readlines()
+    if not keys:
+        return None
+    next_key = keys[0].strip()
+    with open(KEY_FILE, 'w') as file:
+        file.writelines(keys[1:])
+    return next_key
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
@@ -43,6 +54,10 @@ def calculate():
 
     dice = roll_dice()
     score = calculate_final_score(level, dice)
+    key = get_next_key()
+
+    if key is None:
+        return jsonify({'error': '没有可用的key！'}), 400
 
     # 检查并清理历史记录
     if len(history) >= MAX_HISTORY_SIZE:
@@ -57,7 +72,7 @@ def calculate():
         "date": current_date.isoformat()
     })
 
-    return jsonify({'name': name, 'level': level, 'dice': dice, 'score': score})
+    return jsonify({'name': name, 'level': level, 'dice': dice, 'score': score, 'key': key})
 
 @app.route('/history', methods=['GET'])
 def get_history():
@@ -84,4 +99,4 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

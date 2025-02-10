@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏得分计算器</title>
+    <!-- 引入Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <!-- 引入Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary);
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .history-item {
+            background: var(--card-bg);
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            width: auto;
+            padding: 0.5rem 1rem;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-dice"></i> 游戏得分计算器</h1>
+
+        <div class="input-group">
+            <input type="text" id="name" placeholder="玩家昵称" class="modern-input">
+        </div>
+        
+        <div class="input-group">
+            <input type="number" id="level" placeholder="游戏等级 (1-100)" min="1" max="100">
+        </div>
+
+        <button onclick="calculateScore()">
+            <i class="fas fa-calculator"></i>
+            立即计算
+        </button>
+
+        <div class="result-card">
+            <h2>计算结果 <span class="badge" id="countToday">1</span></h2>
+            <p id="resultText" class="result-text">等待计算...</p>
+            <p id="keyText" class="result-text"></p>
+        </div>
+
+        <div class="history">
+            <h2><i class="fas fa-history"></i> 历史记录</h2>
+            <ul class="history-list" id="historyList"></ul>
+            
+            <div class="pagination">
+                <button id="prevPage" onclick="changePage(-1)" class="pagination-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="current-page">第 <span id="currentPage">1</span> 页</span>
+                <button id="nextPage" onclick="changePage(1)" class="pagination-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const itemsPerPage = 5; // 每页显示的条目数
+
+        async function calculateScore() {
+            const name = document.getElementById('name').value.trim();
+            const level = parseInt(document.getElementById('level').value.trim());
+
+            if (!name || isNaN(level) || level < 1 || level > 100) {
+                alert('请输入有效的昵称和等级（1-100）！');
+                return;
+            }
+
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, level }),
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            document.getElementById('resultText').innerText =
+                `昵称: ${data.name}, 等级: ${data.level}, 骰子点数: ${data.dice}, 最终得分: ${data.score}`;
+            document.getElementById('keyText').innerText = `Key: ${data.key}`;
+
+            loadHistory();
+            document.getElementById('countToday').innerText = '0'; // 更新计数
+        }
+
+        async function loadHistory(page = 1) {
+            const response = await fetch(`/history?page=${page}`);
+            const data = await response.json();
+
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = data.items.map(item =>
+                `<li class="history-item">${item.name} - 等级: ${item.level}, 骰子点数: ${item.dice}, 得分: ${item.final_score}, 日期: ${item.date}</li>`
+            ).join('');
+
+            // 更新当前页
+            document.getElementById('currentPage').innerText = page;
+
+            // 更新按钮状态
+            document.getElementById('prevPage').disabled = page === 1;
+            document.getElementById('nextPage').disabled = data.isLastPage;
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            loadHistory(currentPage);
+        }
+
+        // 页面加载时加载历史记录
+        window.onload = () => loadHistory(currentPage);
+    </script>
+</body>
+</html>
